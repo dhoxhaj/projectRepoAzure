@@ -1,0 +1,253 @@
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  name: Default
+
+container:
+  image: sfpipelineone.azurecr.io/image-one:latest
+  endpoint: FisrstServiceConnection
+
+variables:
+  - group: Salesforce gr
+  - name: isMain
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+  - name: isDevelop
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/develop')]
+  - name: isPR
+    value: $[eq(variables['Build.Reason'], 'PullRequest')]
+
+stages:
+
+  - stage: Authenticate
+    displayName: "Stage 1 - Authenticate the Orgs"
+    jobs:
+      - job: AuthOrgs
+        displayName: JWT login to both orgs
+        steps:
+          - task: DownloadSecureFile@1
+            displayName: Download dev private key
+            name: devKey
+            inputs:
+              secureFile: Dev_Server.key
+
+          - task: DownloadSecureFile@1
+            displayName: Download qa private key
+            name: qaKey
+            inputs:
+              secureFile: QA_Server.key
+
+          - script: |
+              sf org login jwt \
+                --client-id $(Dev_ConsumerKey) \
+                --jwt-key-file $(devKey.secureFilePath) \
+                --username $(Dev_Username) \
+                --alias devOrg \
+                --set-default
+              echo "Dev org authenticated successfully"
+            displayName: Authenticate dev org
+
+          - script: |
+              sf org login jwt \
+                --client-id $(QA_ConsumerKey) \
+                --jwt-key-file $(qaKey.secureFilePath) \
+                --username $(QA_Username) \
+                --alias qaOrg
+              echo "QA org authenticated successfully"
+            displayName: Authenticate qa org
+
+  - stage: GenerateDelta
+    displayName: "Stage 2 - Generating delta package"
+    dependsOn: Authenticate
+    condition: |
+      and(
+        succeeded(),
+        ne(variables['Build.Reason'], 'PullRequest')
+      )
+    jobs:
+      - job: Delta
+        displayName: Build delta from git diff
+        steps:
+          - script: |
+              mkdir -p delta
+              if [ -n "$(System.PullRequest.TargetBranchName)" ]; then
+                FROM_REF="origin/$(System.PullRequest.TargetBranchName)"
+              else
+                FROM_REF="$(Build.SourceVersion)^1"
+              fi
+              sgd \
+                --to $(Build.SourceVersion) \
+                --from $FROM_REF \
+                --repo . \
+                --output delta \
+                --generate-delta
+              echo "- Delta package contents -"
+              cat delta/package/package.xml
+              cat delta/destructiveChanges/destructiveChanges.xml
+            displayName: Generate delta package
+
+          - task: PublishPipelineArtifact@1
+            displayName: Save delta package as artifact
+            inputs:
+              targetPath: delta
+              artifact: delta-package
+
+  - stage: ValidateMetadata
+    displayName: "Stage 3 - Validate metadata"
+    dependsOn:
+      - Authenticate
+      - GenerateDelta
+    condition: |
+      and(
+        succeeded('Authenticate'),
+        in(dependencies.GenerateDelta.result, 'Succeeded', 'Skipped')
+      )
+    jobs:
+      - job: ValidatePR
+        displayName: Full validate on PR
+        condition: eq(variables['Build.Reason'], 'PullRequest')
+        steps:
+          - script: |
+              echo "=== Check-only deploy ==="
+              sf project deploy validate \
+                --source-dir force-app \
+                --target-org devOrg \
+                --test-level RunLocalTests \
+                --wait 30
+            displayName: Validate full source against dev org
+
+      - job: ValidateDelta
+        displayName: Delta validate on push
+        condition: ne(variables['Build.Reason'], 'PullRequest')
+        steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifactName: delta-package
+              targetPath: delta
+
+          - script: |
+              echo "=== Check-only deploy (delta) ==="
+              sf project deploy validate \
+                --manifest delta/package/package.xml \
+                --target-org devOrg \
+                --test-level RunLocalTests \
+                --wait 30
+            displayName: Validate delta against dev org
+
+  - stage: ApexTests
+    displayName: "Stage 4 - Apex unit tests"
+    dependsOn: ValidateMetadata
+    condition: succeeded()
+    jobs:
+      - job: RunApexTests
+        displayName: Execute Apex test suite
+        steps:
+          - script: |
+              mkdir -p test-results/apex
+              sf apex run test \
+                --target-org devOrg \
+                --test-level RunLocalTests \
+                --result-format junit \
+                --output-dir test-results/apex \
+                --wait 20
+            displayName: Run Apex tests
+
+          - task: PublishTestResults
+            displayName: Publish Apex test results
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: test-results/apex/*.xml
+              testRunTitle: "Apex Tests — $(Build.SourceBranchName)"
+              failTaskOnFailedTests: true
+
+  - stage: DeployDev
+    displayName: "Stage 5 - Deploy to Dev org"
+    dependsOn: ApexTests
+    condition: |
+      and(
+        succeeded(),
+        eq(variables['Build.SourceBranch'], 'refs/heads/develop'),
+        ne(variables['Build.Reason'], 'PullRequest')
+      )
+    jobs:
+      - deployment: DeployToDev
+        displayName: Deploy delta to dev org
+        environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadPipelineArtifact@2
+                  inputs:
+                    artifactName: delta-package
+                    targetPath: delta
+
+                - script: |
+                    echo "=== Deploying to Dev org ==="
+                    sf project deploy start \
+                      --manifest delta/package/package.xml \
+                      --target-org devOrg \
+                      --test-level RunLocalTests \
+                      --wait 20
+                    echo "=== Deploy to Dev complete ==="
+                  displayName: Deploy delta to dev org
+
+  - stage: DeployToQA
+    displayName: "Stage 6 - Deploy to QA"
+    dependsOn: ApexTests
+    condition: |
+      and(
+        succeeded(),
+        eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+        ne(variables['Build.Reason'], 'PullRequest')
+      )
+    jobs:
+      - deployment: DeployToQA
+        displayName: Deploy delta to qa
+        environment: qa
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: DownloadPipelineArtifact@2
+                  inputs:
+                    artifactName: delta-package
+                    targetPath: delta
+
+                - script: |
+                    echo "=== Deploying to QA org ==="
+                    sf project deploy start \
+                      --manifest delta/package/package.xml \
+                      --target-org qaOrg \
+                      --test-level RunLocalTests \
+                      --wait 20
+                    echo "=== Deploy to QA complete ==="
+                  displayName: Deploy delta to qa org
+
+  - stage: Notify
+    displayName: "Stage 7 - Receiving Message"
+    dependsOn:
+      - DeployDev
+      - DeployToQA
+    condition: always()
+    jobs:
+      - job: SendNotification
+        displayName: Post result to Teams
+        steps:
+          - script: |
+              STATUS="Succeeded"
+              if [ "$(Agent.JobStatus)" != "Succeeded" ]; then
+                STATUS="Failed"
+              fi
+              echo "Final status: $STATUS"
+            displayName: Send Teams notification
