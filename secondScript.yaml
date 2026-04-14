@@ -51,25 +51,15 @@ stages:
             inputs:
               secureFile: QA_Server.key
 
-          - script: |
-              set -x
-              sf org login jwt ^
-                --client-id $(Dev_ConsumerKey) ^
-                --jwt-key-file $(devKey.secureFilePath) ^
-                --username $(Dev_Username) ^
-                --alias devOrg ^
-                --set-default
-              echo "Dev org authenticated successfully"
-            displayName: Authenticate dev org
+          - script: | 
+              sf org login jwt --client-id $(Dev_ConsumerKey) --jwt-key-file $(devKey.secureFilePath) --username $(Dev_Username) --alias devOrg --set-default
+              echo Dev org authenticated successfully
+              displayName: Authenticate dev org
 
           - script: |
-              sf org login jwt ^
-                --client-id $(QA_ConsumerKey) ^
-                --jwt-key-file $(qaKey.secureFilePath) ^
-                --username $(QA_Username) ^
-                --alias qaOrg
-              echo "QA org authenticated successfully"
-            displayName: Authenticate qa org
+              sf org login jwt --client-id $(QA_ConsumerKey) --jwt-key-file $(qaKey.secureFilePath) --username $(QA_Username) --alias qaOrg
+              echo QA org authenticated successfully
+              displayName: Authenticate qa org
 
   - stage: GenerateDelta
     displayName: "Stage 2 - Generating delta package"
