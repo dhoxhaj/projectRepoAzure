@@ -90,7 +90,7 @@ stages:
               else
                 FROM_REF="$(Build.SourceVersion)~1"
               fi
-              sgd \
+              sf sgd source delta \
                 --to $(Build.SourceVersion) \
                 --from $FROM_REF \
                 --repo . \
