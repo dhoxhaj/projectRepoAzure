@@ -57,7 +57,7 @@ stages:
               displayName: Authenticate dev org
 
           - script: |
-              sf org login jwt --client-id $(QA_ConsumerKey) --jwt-key-file $(qaKey.secureFilePath) --username $(QA_Username) --alias qaOrg
+              sf org login jwt --client-id $(QA_ConsumerKey) --jwt-key-file $(qaKey.secureFilePath) --username $(QA-Username) --alias qaOrg
               echo QA org authenticated successfully
               displayName: Authenticate qa org
 
