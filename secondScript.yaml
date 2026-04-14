@@ -90,11 +90,11 @@ stages:
               else
                 FROM_REF="$(Build.SourceVersion)^1"
               fi
-              sgd \
-                --to $(Build.SourceVersion) \
-                --from $FROM_REF \
-                --repo . \
-                --output delta \
+              sgd ^
+                --to $(Build.SourceVersion) ^
+                --from $FROM_REF ^
+                --repo . ^
+                --output delta ^
                 --generate-delta
               echo "- Delta package contents -"
               cat delta/package/package.xml
