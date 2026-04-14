@@ -90,7 +90,7 @@ stages:
               else
                 FROM_REF="$(Build.SourceVersion)~1"
               fi
-              sf sgd source delta --to $(Build.SourceVersion) --from $FROM_REF --repo . --output delta --generate-delta
+              sf sgd source delta --to $(Build.SourceVersion) --from $FROM_REF --repo-dir . --output-dir delta --generate-delta
               echo "- Delta package contents -"
               cat delta/package/package.xml
               cat delta/destructiveChanges/destructiveChanges.xml
