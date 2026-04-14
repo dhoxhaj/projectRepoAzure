@@ -1,3 +1,5 @@
+name: Salesforce-CI-CD
+
 trigger:
   branches:
     include:
@@ -10,12 +12,15 @@ pr:
       - main
       - develop
 
+resources:
+  containers:
+    - container: buildAgent
+      image: sfpipelineone.azurecr.io/image-one:latest
+      endpoint: FisrstServiceConnection  
+
 pool:
   name: Default
-
-container:
-  image: sfpipelineone.azurecr.io/image-one:latest
-  endpoint: FisrstServiceConnection
+  container: buildAgent
 
 variables:
   - group: Salesforce gr
@@ -161,7 +166,7 @@ stages:
                 --wait 20
             displayName: Run Apex tests
 
-          - task: PublishTestResults
+          - task: PublishTestResults@2
             displayName: Publish Apex test results
             condition: always()
             inputs:
