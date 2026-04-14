@@ -53,20 +53,20 @@ stages:
 
           - script: |
               set -x
-              sf org login jwt \
-                --client-id $(Dev_ConsumerKey) \
-                --jwt-key-file $(devKey.secureFilePath) \
-                --username $(Dev_Username) \
-                --alias devOrg \
+              sf org login jwt ^
+                --client-id $(Dev_ConsumerKey) ^
+                --jwt-key-file $(devKey.secureFilePath) ^
+                --username $(Dev_Username) ^
+                --alias devOrg ^
                 --set-default
               echo "Dev org authenticated successfully"
             displayName: Authenticate dev org
 
           - script: |
-              sf org login jwt \
-                --client-id $(QA_ConsumerKey) \
-                --jwt-key-file $(qaKey.secureFilePath) \
-                --username $(QA_Username) \
+              sf org login jwt ^
+                --client-id $(QA_ConsumerKey) ^
+                --jwt-key-file $(qaKey.secureFilePath) ^
+                --username $(QA_Username) ^
                 --alias qaOrg
               echo "QA org authenticated successfully"
             displayName: Authenticate qa org
