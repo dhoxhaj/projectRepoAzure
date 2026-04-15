@@ -156,7 +156,11 @@ stages:
 
           - bash: |
               echo "=== Check-only deploy (delta) ==="
-              sf project deploy validate --manifest delta/package/package.xml --target-org devOrg --test-level RunLocalTests --wait 30
+              if grep -q '<members>' delta/package/package.xml; then
+                sf project deploy validate --manifest delta/package/package.xml --target-org devOrg --test-level RunLocalTests --wait 30
+              else
+                echo "No Salesforce metadata changes detected in delta. Skipping validation."
+              fi
             displayName: Validate delta against dev org
 
   - stage: ApexTests
