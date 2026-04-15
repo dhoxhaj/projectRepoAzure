@@ -83,6 +83,9 @@ stages:
         displayName: Build delta from git diff
         container: buildAgent
         steps:
+          - checkout: self          
+            fetchDepth: 0
+            
           - bash: |
               mkdir -p delta
               if [ -n "$SYSTEM_PULLREQUEST_TARGETBRANCHNAME" ]; then
