@@ -293,4 +293,4 @@ stages:
                 STATUS="Failed"
               fi
               echo "Final status: $STATUS"
-            displayName: Send Teams notification
+            displayName: Send notification
