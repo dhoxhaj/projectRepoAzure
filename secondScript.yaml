@@ -132,11 +132,7 @@ stages:
 
           - bash: |
               echo "=== Check-only deploy ==="
-              sf project deploy validate \
-                --source-dir force-app \
-                --target-org devOrg \
-                --test-level RunLocalTests \
-                --wait 30
+              sf project deploy validate --source-dir force-app --target-org devOrg --test-level RunLocalTests --wait 30
             displayName: Validate full source against dev org
 
       - job: ValidateDelta
@@ -160,11 +156,7 @@ stages:
 
           - bash: |
               echo "=== Check-only deploy (delta) ==="
-              sf project deploy validate \
-                --manifest delta/package/package.xml \
-                --target-org devOrg \
-                --test-level RunLocalTests \
-                --wait 30
+              sf project deploy validate --manifest delta/package/package.xml --target-org devOrg --test-level RunLocalTests --wait 30
             displayName: Validate delta against dev org
 
   - stage: ApexTests
@@ -187,12 +179,7 @@ stages:
 
           - bash: |
               mkdir -p test-results/apex
-              sf apex run test \
-                --target-org devOrg \
-                --test-level RunLocalTests \
-                --result-format junit \
-                --output-dir test-results/apex \
-                --wait 20
+              sf apex run test --target-org devOrg --test-level RunLocalTests --result-format junit --output-dir test-results/apex --wait 20
             displayName: Run Apex tests
 
           - task: PublishTestResults@2
@@ -238,11 +225,7 @@ stages:
 
                 - bash: |
                     echo "=== Deploying to Dev org ==="
-                    sf project deploy start \
-                      --manifest delta/package/package.xml \
-                      --target-org devOrg \
-                      --test-level RunLocalTests \
-                      --wait 20
+                    sf project deploy start --manifest delta/package/package.xml --target-org devOrg --test-level RunLocalTests --wait 20
                     echo "=== Deploy to Dev complete ==="
                   displayName: Deploy delta to dev org
 
@@ -280,11 +263,7 @@ stages:
 
                 - bash: |
                     echo "=== Deploying to QA org ==="
-                    sf project deploy start \
-                      --manifest delta/package/package.xml \
-                      --target-org qaOrg \
-                      --test-level RunLocalTests \
-                      --wait 20
+                    sf project deploy start --manifest delta/package/package.xml --target-org qaOrg --test-level RunLocalTests --wait 20
                     echo "=== Deploy to QA complete ==="
                   displayName: Deploy delta to qa org
 
