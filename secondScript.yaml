@@ -58,7 +58,7 @@ stages:
               else
                 echo "$FORCE_APP_CHANGED"
               fi
-              
+
               TOTAL=$(git diff --name-only "$BASE_REF" HEAD | wc -l | tr -d ' ')
               FORCE=$(git diff --name-only "$BASE_REF" HEAD -- force-app | wc -l | tr -d ' ')
               echo "Total files changed : $TOTAL"
@@ -135,21 +135,12 @@ stages:
               secureFile: QA_Server.key
 
           - bash: |
-              sf org login jwt \
-                --client-id $(Dev_ConsumerKey) \
-                --jwt-key-file $(devKey.secureFilePath) \
-                --username $(Dev_Username) \
-                --alias devOrg \
-                --set-default
+              sf org login jwt --client-id $(Dev_ConsumerKey) --jwt-key-file $(devKey.secureFilePath) --username $(Dev_Username) --alias devOrg --set-default
               echo "Dev org authenticated"
             displayName: Authenticate dev org
 
           - bash: |
-              sf org login jwt \
-                --client-id $(QA_ConsumerKey) \
-                --jwt-key-file $(qaKey.secureFilePath) \
-                --username $(QA-Username) \
-                --alias qaOrg
+              sf org login jwt --client-id $(QA_ConsumerKey) --jwt-key-file $(qaKey.secureFilePath) --username $(QA_Username) --alias qaOrg
               echo "QA org authenticated"
             displayName: Authenticate QA org
 
@@ -169,12 +160,7 @@ stages:
               secureFile: Dev_Server.key
 
           - bash: |
-              sf org login jwt \
-                --client-id $(Dev_ConsumerKey) \
-                --jwt-key-file $(devKey.secureFilePath) \
-                --username $(Dev_Username) \
-                --alias devOrg \
-                --set-default
+              sf org login jwt --client-id $(Dev_ConsumerKey) --jwt-key-file $(devKey.secureFilePath) --username $(Dev_Username) --alias devOrg --set-default
             displayName: Re-authenticate dev org
 
           - task: DownloadPipelineArtifact@2
@@ -185,6 +171,7 @@ stages:
 
           - bash: |
               echo "=== Check-only deploy (validate) ==="
+              if [ "$(Build.Reason)" = "PullRequest" ]; then
                 sf project deploy validate --source-dir force-app --target-org devOrg --test-level RunLocalTests --wait 30
               else
                 sf project deploy validate --manifest delta/package/package.xml --target-org devOrg --test-level RunLocalTests --wait 30
@@ -205,7 +192,6 @@ stages:
               testRunTitle: "Apex Tests — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
-      # --- Parallel: PMD Static Analysis ---
       - job: PMDAnalysis
         displayName: PMD static analysis
         container: buildAgent
@@ -224,13 +210,12 @@ stages:
               testRunTitle: "PMD Analysis — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
-      # --- Parallel: ESLint ---
       - job: Linting
         displayName: ESLint (LWC / Aura)
         container: buildAgent
         steps:
           - bash: |
-              mkdir -p test-results/eslint
+              mkdir -p $(Build.SourcesDirectory)/test-results/eslint
               cd /app && npx eslint $(Build.SourcesDirectory)/force-app --ext .js --format junit --output-file $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml || true
             displayName: Run ESLint
 
@@ -242,6 +227,7 @@ stages:
               testResultsFiles: test-results/eslint/eslint-results.xml
               testRunTitle: "ESLint — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
+
   - stage: Deploy
     displayName: "Stage 4 - Deploy"
     dependsOn: Validation
@@ -295,11 +281,7 @@ stages:
                     secureFile: QA_Server.key
 
                 - bash: |
-                    sf org login jwt \
-                      --client-id $(QA_ConsumerKey) \
-                      --jwt-key-file $(qaKey.secureFilePath) \
-                      --username $(QA-Username) \
-                      --alias qaOrg
+                    sf org login jwt --client-id $(QA_ConsumerKey) --jwt-key-file $(qaKey.secureFilePath) --username $(QA_Username) --alias qaOrg
                   displayName: Re-authenticate QA org
 
                 - task: DownloadPipelineArtifact@2
@@ -341,9 +323,7 @@ stages:
 
               if [ "$(Build.Reason)" = "PullRequest" ]; then
                 az devops configure --defaults organization=$(System.TeamFoundationCollectionUri) project=$(System.TeamProject)
-                az repos pr comment create \
-                  --id $(System.PullRequest.PullRequestId) \
-                  --comment "$COMMENT"
+                az repos pr comment create --id $(System.PullRequest.PullRequestId) --comment "$COMMENT"
               fi
             displayName: Parse and post test results to PR
             env:
