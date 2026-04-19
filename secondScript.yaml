@@ -49,11 +49,13 @@ stages:
                 BASE_REF="$(git merge-base HEAD^ HEAD)"
               fi
 
-              CHANGED=$(git  --name-only "$BASE_REF" HEAD -- force-app)
+              CHANGED=$(git diff --name-only "$BASE_REF" HEAD -- force-app)
               if [ -z "$CHANGED" ]; then
-                echo "No changes in force-app"
+                echo "No changes in force-app. Skipping deeper checks."
+                echo "##vso[task.setvariable variable=forceAppChanged;isOutput=true]false"
               else
                 echo "Changes detected in force-app."
+                echo "##vso[task.setvariable variable=forceAppChanged;isOutput=true]true"
               fi
             name: detectChanges
             displayName: Detect force-app changes
@@ -78,8 +80,10 @@ stages:
               cat delta/package/package.xml
 
               if ! grep -q '<members>' delta/package/package.xml; then
+                echo "##vso[task.setvariable variable=deltaEmpty;isOutput=true]true"
                 echo "Delta package is empty. No metadata changes found."
               else
+                echo "##vso[task.setvariable variable=deltaEmpty;isOutput=true]false"
               fi
             name: generateDelta
             displayName: Generate delta package
