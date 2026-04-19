@@ -21,4 +21,18 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     echo y | sf plugins install sfdx-git-delta && \
     apt-get clean
 
+RUN curl -sSL "https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-bin-${PMD_VERSION}.zip" -o /tmp/pmd.zip && \
+    unzip -q /tmp/pmd.zip -d /opt && \
+    mv /opt/pmd-bin-${PMD_VERSION} /opt/pmd && \
+    rm /tmp/pmd.zip
+
+RUN mkdir -p /app && cd /app && \
+    npm init -y && \
+    npm install --save-dev \
+        eslint \
+        @salesforce/eslint-config-lwc \
+        @salesforce/eslint-plugin-aura \
+        @salesforce/eslint-plugin-lightning \
+        @lwc/eslint-plugin-lwc
+
 WORKDIR /app
