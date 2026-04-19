@@ -230,13 +230,6 @@ stages:
         container: buildAgent
         steps:
           - bash: |
-              PMD_VERSION="6.55.0"
-              curl -sSL "https://github.com/pmd/pmd/releases/download/pmd_releases%2F${PMD_VERSION}/pmd-bin-${PMD_VERSION}.zip" -o pmd.zip
-              unzip -q pmd.zip
-              mv pmd-bin-${PMD_VERSION} pmd
-            displayName: Install PMD
-
-          - bash: |
               mkdir -p test-results/pmd
               pmd/bin/run.sh pmd \
                 --dir force-app \
@@ -261,19 +254,11 @@ stages:
         container: buildAgent
         steps:
           - bash: |
-              npm install --save-dev \
-                eslint \
-                @salesforce/eslint-config-lwc \
-                @salesforce/eslint-plugin-aura \
-                @salesforce/eslint-plugin-lightning
-            displayName: Install ESLint + Salesforce plugins
-
-          - bash: |
               mkdir -p test-results/eslint
-              npx eslint force-app \
-                --ext .js \
-                --format junit \
-                --output-file test-results/eslint/eslint-results.xml || true
+              cd /app && npx eslint $(Build.SourcesDirectory)/force-app \
+              --ext .js \
+              --format junit \
+              --output-file $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml || true
             displayName: Run ESLint
 
           - task: PublishTestResults@2
@@ -284,7 +269,6 @@ stages:
               testResultsFiles: test-results/eslint/eslint-results.xml
               testRunTitle: "ESLint — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
-
   - stage: Deploy
     displayName: "Stage 4 - Deploy"
     dependsOn: Validation
