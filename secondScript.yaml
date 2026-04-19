@@ -82,12 +82,7 @@ stages:
               fi
 
               mkdir -p delta
-              sf sgd source delta \
-                --to $(Build.SourceVersion) \
-                --from "$FROM_REF" \
-                --repo-dir . \
-                --output-dir delta \
-                --generate-delta
+              sf sgd source delta --to $(Build.SourceVersion) --from "$FROM_REF" --repo-dir . --output-dir delta --generate-delta
 
               cat delta/package/package.xml
 
