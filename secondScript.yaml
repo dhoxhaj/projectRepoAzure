@@ -169,6 +169,7 @@ stages:
 
           - bash: |
               echo "=== Check-only deploy (validate) ==="
+              if [ ! -f delta/package/package.xml ] || ! grep -q '<members>' delta/package/package.xml; then
                 sf project deploy validate --source-dir force-app --target-org devOrg --test-level RunLocalTests --wait 30
               else
                 sf project deploy validate --manifest delta/package/package.xml --target-org devOrg --test-level RunLocalTests --wait 30
