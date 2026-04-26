@@ -58,7 +58,7 @@ stages:
               else
                 echo "$FORCE_APP_CHANGED"
               fi
-              
+
               TOTAL=$(git diff --name-only "$BASE_REF" HEAD | wc -l | tr -d ' ')
               FORCE=$(git diff --name-only "$BASE_REF" HEAD -- force-app | wc -l | tr -d ' ')
               echo "Total files changed : $TOTAL"
@@ -190,14 +190,13 @@ stages:
               testRunTitle: "Apex Tests — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
-      # --- Parallel: PMD Static Analysis ---
       - job: PMDAnalysis
         displayName: PMD static analysis
         container: buildAgent
         steps:
           - bash: |
-              mkdir -p test-results/pmd
-              /opt/pmd/bin/run.sh pmd --dir force-app --rulesets category/apex/bestpractices.xml,category/apex/errorprone.xml,category/apex/performance.xml --format junit --report-file test-results/pmd/pmd-results.xml --minimum-priority 2 || true
+              mkdir -p $(Build.SourcesDirectory)/test-results/pmd
+              /opt/pmd/bin/run.sh pmd --dir force-app --rulesets category/apex/bestpractices.xml,category/apex/errorprone.xml,category/apex/performance.xml --format junit --report-file $(Build.SourcesDirectory)/test-results/pmd/pmd-results.xml --minimum-priority 2 || true
             displayName: Run PMD on force-app
 
           - task: PublishTestResults@2
@@ -205,17 +204,16 @@ stages:
             condition: always()
             inputs:
               testResultsFormat: JUnit
-              testResultsFiles: test-results/pmd/pmd-results.xml
+              testResultsFiles: $(Build.SourcesDirectory)/test-results/pmd/pmd-results.xml
               testRunTitle: "PMD Analysis — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
-      # --- Parallel: ESLint ---
       - job: Linting
         displayName: ESLint (LWC / Aura)
         container: buildAgent
         steps:
           - bash: |
-              mkdir -p test-results/eslint
+              mkdir -p $(Build.SourcesDirectory)/test-results/eslint
               cd /app && npx eslint $(Build.SourcesDirectory)/force-app --ext .js --format junit --output-file $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml || true
             displayName: Run ESLint
 
@@ -224,9 +222,10 @@ stages:
             condition: always()
             inputs:
               testResultsFormat: JUnit
-              testResultsFiles: test-results/eslint/eslint-results.xml
+              testResultsFiles: $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml
               testRunTitle: "ESLint — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
+
   - stage: Deploy
     displayName: "Stage 4 - Deploy"
     dependsOn: Validation
@@ -322,9 +321,7 @@ stages:
 
               if [ "$(Build.Reason)" = "PullRequest" ]; then
                 az devops configure --defaults organization=$(System.TeamFoundationCollectionUri) project=$(System.TeamProject)
-                az repos pr comment create \
-                  --id $(System.PullRequest.PullRequestId) \
-                  --comment "$COMMENT"
+                az repos pr comment create --id $(System.PullRequest.PullRequestId) --comment "$COMMENT"
               fi
             displayName: Parse and post test results to PR
             env:
