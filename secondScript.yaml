@@ -196,6 +196,7 @@ stages:
         displayName: PMD static analysis
         container: buildAgent
         steps:
+          - checkout: self
           - bash: |
               mkdir -p $(Build.SourcesDirectory)/test-results/pmd
               /opt/pmd/bin/run.sh pmd --dir force-app --rulesets category/apex/bestpractices.xml,category/apex/errorprone.xml,category/apex/performance.xml --format junit --report-file test-results/pmd/pmd-results.xml --minimum-priority 2 || true
@@ -214,6 +215,7 @@ stages:
         displayName: ESLint (LWC / Aura)
         container: buildAgent
         steps:
+          - checkout: self
           - bash: |
               mkdir -p $(Build.SourcesDirectory)/test-results/eslint
               npx eslint $(Build.SourcesDirectory)/force-app --ext .js --format junit --output-file test-results/eslint/eslint-results.xml || true
