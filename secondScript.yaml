@@ -216,7 +216,7 @@ stages:
           - checkout: self
           - bash: |
               mkdir -p $(Build.SourcesDirectory)/test-results/eslint
-              npx eslint $(Build.SourcesDirectory)/force-app --ext .js --format junit --output-file test-results/eslint/eslint-results.xml || true
+              npx eslint $(Build.SourcesDirectory)/force-app --ext .js --format junit --output-file $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml || true
             displayName: Run ESLint
 
           - task: PublishTestResults@2
@@ -224,7 +224,7 @@ stages:
             condition: always()
             inputs:
               testResultsFormat: JUnit
-              testResultsFiles: test-results/eslint/eslint-results.xml
+              testResultsFiles: $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml
               testRunTitle: "ESLint — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
