@@ -197,8 +197,8 @@ stages:
         container: buildAgent
         steps:
           - bash: |
-              mkdir -p test-results/pmd
-              /opt/pmd/bin/run.sh pmd --dir force-app --rulesets category/apex/bestpractices.xml,category/apex/errorprone.xml,category/apex/performance.xml --format junit --report-file test-results/pmd/pmd-results.xml --minimum-priority 2 || true
+              mkdir -p $(Build.SourcesDirectory)/test-results/pmd
+              /opt/pmd/bin/run.sh pmd --dir force-app --rulesets category/apex/bestpractices.xml,category/apex/errorprone.xml,category/apex/performance.xml --format junit --report-file $(Build.SourcesDirectory)/test-results/pmd/pmd-results.xml --minimum-priority 2 || true
             displayName: Run PMD on force-app
 
           - task: PublishTestResults@2
@@ -206,7 +206,7 @@ stages:
             condition: always()
             inputs:
               testResultsFormat: JUnit
-              testResultsFiles: test-results/pmd/pmd-results.xml
+              testResultsFiles: $(Build.SourcesDirectory)/test-results/pmd/pmd-results.xml
               testRunTitle: "PMD Analysis — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
@@ -224,7 +224,7 @@ stages:
             condition: always()
             inputs:
               testResultsFormat: JUnit
-              testResultsFiles: test-results/eslint/eslint-results.xml
+              testResultsFiles: $(Build.SourcesDirectory)/test-results/eslint/eslint-results.xml
               testRunTitle: "ESLint — $(Build.SourceBranchName)"
               failTaskOnFailedTests: true
 
